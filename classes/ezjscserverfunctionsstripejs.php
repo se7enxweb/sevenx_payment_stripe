@@ -210,18 +210,31 @@ class ezjscServerFunctionsStripeJs extends ezjscServerFunctions
             return null;
         }
 
-        $country = trim( (string) $info->attribute( 'country' ) );
+        // account_information may return an eZOrderAccountInformation object
+        // or a plain associative array depending on the eZ Publish version.
+        if ( is_array( $info ) )
+        {
+            $country    = trim( (string)( $info['country']  ?? '' ) );
+            $line1      = trim( (string)( $info['address']  ?? '' ) );
+            $city       = trim( (string)( $info['place']    ?? '' ) );
+            $state      = trim( (string)( $info['state']    ?? '' ) );
+            $postalCode = trim( (string)( $info['zip']      ?? '' ) );
+        }
+        else
+        {
+            $country    = trim( (string) $info->attribute( 'country' ) );
+            $line1      = trim( (string) $info->attribute( 'address' ) );
+            $city       = trim( (string) $info->attribute( 'place' ) );
+            $state      = trim( (string) $info->attribute( 'state' ) );
+            $postalCode = trim( (string) $info->attribute( 'zip' ) );
+        }
+
         if ( empty( $country ) )
         {
             return null;
         }
 
         $address = [ 'country' => $country ];
-
-        $line1      = trim( (string) $info->attribute( 'address' ) );
-        $city       = trim( (string) $info->attribute( 'place' ) );
-        $state      = trim( (string) $info->attribute( 'state' ) );
-        $postalCode = trim( (string) $info->attribute( 'zip' ) );
 
         if ( $line1 )      { $address['line1']       = $line1; }
         if ( $city )       { $address['city']        = $city; }
