@@ -1,6 +1,6 @@
 # 7x Payment Gateway : Stripe
 
-A [Stripe](https://stripe.com) payment gateway extension for **eZ Publish 4 / Exponential CMS**. Provides an alternative payment gateway using the modern **Stripe Payment Element** — a single, embedded UI that supports cards, Apple Pay, Google Pay, Link, and every Stripe-supported payment method with zero additional code.
+A [Stripe](https://stripe.com) payment gateway extension for **Exponential**. Provides an alternative payment gateway using the modern **Stripe Payment Element** — a single, embedded UI that supports cards, Apple Pay, Google Pay, Link, and every Stripe-supported payment method with zero additional code.
 
 ---
 
@@ -11,22 +11,22 @@ A [Stripe](https://stripe.com) payment gateway extension for **eZ Publish 4 / Ex
 | **Extension name** | `sevenx_payment_stripe` |
 | **Version** | 1.0.0 |
 | **License** | [GNU General Public License v2.0 (or any later version)](LICENSE) |
-| **Requires** | eZ Publish 4.7+ / Exponential CMS · PHP 8.0+ · Composer · **ezjscore** extension |
+| **Requires** | Exponential CMS 4.7+ · PHP 8.0+ · Composer · **ezjscore** extension |
 | **ezjscore** | Latest version — must be installed, activated, and working |
 | **Stripe PHP SDK** | `stripe/stripe-php` v14+ (installed via Composer) |
 | **Stripe.js** | v3 (loaded from `https://js.stripe.com/v3/`) |
-| **Tested on** | PHP 8.2, eZ Publish 4.7 (Exponential CMS fork) |
+| **Tested on** | PHP 8.2, Exponential CMS 4.7 |
 
 ---
 
 ## How it works
 
-The extension integrates with the eZ Publish shop **workflow event** system. When a customer reaches the payment step, eZ Publish calls `loadForm()` on the gateway class, which renders the Stripe Payment Element. After Stripe confirms the payment in-page, the JS posts to `ezjsc-stripe::verify` which verifies the result server-side and marks the order as **Paid** (status 1000). The browser then navigates to a clean `/shop/checkout` URL where the workflow advances automatically.
+The extension integrates with the Exponential shop **workflow event** system. When a customer reaches the payment step, Exponential calls `loadForm()` on the gateway class, which renders the Stripe Payment Element. After Stripe confirms the payment in-page, the JS posts to `ezjsc-stripe::verify` which verifies the result server-side and marks the order as **Paid** (status 1000). The browser then navigates to a clean `/shop/checkout` URL where the workflow advances automatically.
 
 ### Payment flow
 
 ```
-Browser                    eZ Publish / PHP              Stripe
+Browser                    Exponential / PHP             Stripe
   |                               |                         |
   |--- GET /shop/checkout ------->|                         |
   |   (pre_checkout workflow      |                         |
@@ -60,7 +60,7 @@ Browser                    eZ Publish / PHP              Stripe
   |   (loadForm() finds           |                         |
   |    status_id === 1000)        |                         |
   |<-- STATUS_ACCEPTED -----------|                         |
-  |   (workflow advances,         |                         |
+  |   (Exponential advances,      |                         |
   |    order confirmation shown)  |                         |
 ```
 
@@ -70,7 +70,7 @@ Browser                    eZ Publish / PHP              Stripe
 2. **`POST ezjsc-stripe::confirm`** — `stripe-checkout.js` posts `{"orderId": <int>}` to this eZJSCore endpoint. `ezjscServerFunctionsStripeJs::confirm()` validates ownership, calculates order totals, optionally calls the Stripe Tax API, and creates a `PaymentIntent`. Returns `{"error_text":"","content":{"clientSecret":"..."}}` to the browser.
 3. **`stripe.confirmPayment()`** — Stripe.js collects the payment method, handles 3D Secure challenges in-page (`redirect: "if_required"`). Cards and most methods succeed without leaving the page. Methods that require a redirect use `return_url: window.location.origin + "/shop/checkout"` so the verify step runs on return.
 4. **`POST ezjsc-stripe::verify`** — On `paymentIntent.status === 'succeeded'` (or on redirect-back via `checkStatus()`), the JS posts `{"paymentIntentId": "pi_..."}`. `ezjscServerFunctionsStripeJs::verify()` retrieves the `PaymentIntent` from Stripe server-side (never trusting client data alone), confirms `status === 'succeeded'` and `metadata.order_id` matches, then calls `$order->modifyStatus(1000)` which records the status change atomically.
-5. **Workflow completion** — The JS calls `window.location.replace("/shop/checkout")` — a clean URL with no Stripe query parameters. eZ Publish calls `loadForm()` again; it detects `status_id === 1000` and returns `STATUS_ACCEPTED`, advancing the workflow to the order confirmation page.
+5. **Workflow completion** — The JS calls `window.location.replace("/shop/checkout")` — a clean URL with no Stripe query parameters. Exponential calls `loadForm()` again; it detects `status_id === 1000` and returns `STATUS_ACCEPTED`, advancing the workflow to the order confirmation page.
 
 ---
 
@@ -103,8 +103,9 @@ extension/sevenx_payment_stripe/
 │   └── ezjscserverfunctionsstripejs.php        eZJSCore endpoints — confirm (create PI) + verify (set status 1000)
 ├── modules/charge/
 │   ├── module.php                              Registers 'charge' module views
-│   ├── charge.php                              Legacy placeholder (unused)
-│   └── confirm.php                             Legacy placeholder — redirects to /shop/checkout
+│   ├── charge.php                              Fallback for ezjsc-stripe::confirm
+│   ├── confirm.php                             Deprecated stub — redirects to /shop/checkout
+│   └── verify.php                              Fallback for ezjsc-stripe::verify
 ├── design/standard/
 │   ├── javascript/stripe-checkout.js        Payment Element JS, confirmPayment() call
 │   ├── stylesheets/checkout.css                Checkout form styles
@@ -122,31 +123,29 @@ extension/sevenx_payment_stripe/
 
 ## Configuration
 
-### INI settings — `settings/stripe.ini.append.php`
+### INI settings — `settings/override/stripe.ini.append.php`
+
+Set real keys in the **site-level override** (never in the extension's own `settings/stripe.ini.append.php`, which is committed to version control and contains only placeholders).
 
 ```ini
 [Sevenx_Payment_Stripe_Settings]
-# Stripe secret key. Use sk_test_... for development, sk_live_... for production.
-# Never commit live keys to version control.
+# Both keys must come from the same Stripe account.
+# Use sk_test_... / pk_test_... for development, sk_live_... / pk_live_... for production.
 SecretKey=sk_test_...
+PublishableKey=pk_test_...
 
 # Display help text on the payment form (true/false)
 DisplayHelp=false
 ```
 
-### Publishable key — `design/standard/javascript/stripe-checkout.js`
-
-```js
-const stripe = Stripe("pk_test_..."); // swap for pk_live_... in production
-```
+> Find your keys at [https://dashboard.stripe.com/apikeys](https://dashboard.stripe.com/apikeys).
 
 ---
 
 ## Going live (test → production)
 
-1. Replace `SecretKey` in `stripe.ini.append.php` with your `sk_live_...` key.
-2. Replace `Stripe("pk_test_...")` in `stripe-checkout.js` with your `pk_live_...` key.
-3. Confirm `window.location.origin + "/shop/checkout"` resolves correctly for your domain — this is the `return_url` used for redirect-required payment methods (iDEAL, 3DS fallback, etc.).
+1. Replace both `SecretKey` and `PublishableKey` in `settings/override/stripe.ini.append.php` with your `sk_live_...` and `pk_live_...` keys. Both must be from the same Stripe account.
+2. Confirm `window.location.origin + "/shop/checkout"` resolves correctly for your domain — this is the `return_url` used for redirect-required payment methods (iDEAL, 3DS fallback, etc.).
 4. If using Stripe Tax, verify that Tax is activated in the Stripe Dashboard for your account.
 5. Test end-to-end in the Stripe Dashboard with a live card before announcing production.
 
@@ -154,7 +153,7 @@ const stripe = Stripe("pk_test_..."); // swap for pk_live_... in production
 
 ## Requirements summary
 
-- eZ Publish 4.7+ or Exponential CMS (PHP 8 compatible fork)
+- Exponential 6.0.x+ (PHP 8.2+)
 - PHP 8.0 or higher
 - **ezjscore** extension — latest version, installed and activated (the AJAX endpoints `ezjsc-stripe::confirm` and `ezjsc-stripe::verify` are registered via ezjscore's `FunctionList` mechanism; without it no payment can be initialised or verified)
 - Composer (for the `stripe/stripe-php` SDK)

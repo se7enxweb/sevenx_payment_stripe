@@ -39,11 +39,11 @@ is a fatal error in PHP 8.
 | `EZ_WORKFLOW_TYPE_STATUS_ACCEPTED` | `eZWorkflowEventType::STATUS_ACCEPTED` |
 
 The old `define()`-based constants were deprecated and the class constants are
-the correct form for eZ Publish 4.7+.
+the correct form for Exponential CMS 4.7+.
 
 ### `include_once` removed
 `include_once( 'kernel/shop/classes/ezpaymentgateway.php' )` is commented out.
-The autoloader handles class loading in modern eZ Publish / Exponential CMS.
+The autoloader handles class loading in Exponential CMS.
 
 ### `validateForm()` signature extended
 | Stock | This fork |
