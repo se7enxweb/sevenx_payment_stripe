@@ -3,10 +3,13 @@
 const DEBUG = false;
 
 // ---------------------------------------------------------------------------
-// Stripe public key — swap test/live key via stripe.ini SecretKey counterpart.
+// Stripe public key — read from data-publishable-key set by stripe_form.tpl.
+// The template gets the value from stripe.ini PublishableKey so test/live
+// switching is done entirely in INI config with no JS edits needed.
 // ---------------------------------------------------------------------------
-// const stripe = Stripe("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");
-const stripe = Stripe("sk_test_72xAGBCEMAci996N2PhlT0iB9ZZeJiyCp6tCvbA89ABtfw4fgMmBa28A4f45d6sf4das6f4afd4dsa6fads6X2VWFrlrvGOq2H4choUl6hIRq1qsm00B4lGvXWG");
+const publishableKey = document.querySelector("#payment-form").dataset.publishableKey;
+if (!publishableKey) { throw new Error("[stripe] data-publishable-key not set on #payment-form"); }
+const stripe = Stripe(publishableKey);
 
 // Order ID is written by the template into data-order-id on #payment-form.
 const orderId = parseInt(document.querySelector("#payment-form").dataset.orderId, 10);
@@ -50,7 +53,12 @@ async function initialize() {
     }
 
     elements = stripe.elements({ clientSecret: data.content.clientSecret });
-    elements.create("payment", { layout: "tabs" }).mount("#payment-element");
+    const paymentElement = elements.create("payment", { layout: "tabs" });
+    paymentElement.on("loaderror", (event) => {
+        if (DEBUG) console.error("[stripe] Payment Element loaderror", event.error);
+        showMessage(event.error?.message || "Payment form failed to load. Please refresh and try again.");
+    });
+    paymentElement.mount("#payment-element");
 }
 
 // ---------------------------------------------------------------------------
@@ -136,6 +144,7 @@ async function verifyAndRedirect(paymentIntentId) {
         }
 
         window.location.replace("/shop/checkout");
+        console.log("[stripe] verify SUCCESS — would redirect to /shop/checkout");
     } catch (err) {
         showMessage("Payment verification failed. Please contact support.");
         setLoading(false);

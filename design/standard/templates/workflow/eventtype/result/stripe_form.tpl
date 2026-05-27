@@ -86,7 +86,7 @@
 <script src={"javascript/stripe-checkout.js"|ezdesign()} defer></script>
 
     <!-- Display a payment form -->
-    <form id="payment-form" data-order-id="{$order_id}">
+    <form id="payment-form" data-order-id="{$order_id}" data-publishable-key="{$publishable_key|wash}">
       <div id="payment-element">
         <!--Stripe.js injects the Payment Element-->
       </div>

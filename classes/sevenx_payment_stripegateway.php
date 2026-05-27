@@ -53,9 +53,10 @@ class Sevenx_Payment_StripeGateway extends eZCurlGateway
         // status_id to 1000 before the clean reload reaches here, so Case 1
         // above handles the return path — nothing to do in this case.
 
-        $tplVars['s_display_help'] = $ini->variable( 'Sevenx_Payment_Stripe_Settings', 'DisplayHelp' );
-        $tplVars['errors']         = $errors;
-        $tplVars['order_id']       = $processParams['order_id'];
+        $tplVars['s_display_help']  = $ini->variable( 'Sevenx_Payment_Stripe_Settings', 'DisplayHelp' );
+        $tplVars['errors']          = $errors;
+        $tplVars['order_id']        = $processParams['order_id'];
+        $tplVars['publishable_key'] = $ini->variable( 'Sevenx_Payment_Stripe_Settings', 'PublishableKey' );
 
         $process->Template = array(
             'templateName' => 'design:workflow/eventtype/result/stripe_form.tpl',
