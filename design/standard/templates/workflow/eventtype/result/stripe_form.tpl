@@ -7,14 +7,69 @@
 
   By default, it is the submit button.
 *}
-<div class="maincontentbody">
-        <div class="content-view-full">
-            <div class="class-article">
+
+          <!-- hero starts -->
+      <section class="pt-24 pb-12 sm:pb-16 lg:pb-20 sm:pt-28">
+        <div class="lg:container mx-auto px-4">
+          <!-- breadeadcrumb starts -->
+          <div
+            class="print:hidden flex flex-wrap items-center gap-y-1 text-gray-400 text-sm mb-6"
+          >
+            <a
+              href="/shop/cart"
+              class="text-gray-500 duration-300 hover:underline hover:text-gray-900"
+            >
+              Shopping cart
+            </a>
+            <span>
+              <svg
+                class="h-5 w-5 leading-none text-gray-300"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </span>
+            <a
+              href="/shop/userregister"
+              class="text-gray-500 duration-300 hover:underline hover:text-gray-900"
+            >
+              Account information
+            </a>
+            <span>
+              <svg
+                class="h-5 w-5 leading-none text-gray-300"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M9 5l7 7-7 7"
+                />
+              </svg>
+            </span>
+            <span class="text-gray-500 duration-300"> Confirm Payment Details </span>
+          </div>
+          <!-- breadcrumb ends -->
+
+
+          <!-- user info starts -->
+          <div class="grid grid-cols-2 gap-6 mb-20">
 
 <h2>Payment Information</h2>
-<ul>
-<li>Please enter your credit card information</li>
-</ul>
+
+<p>Please enter your credit card information</p>
 
 {if ne($errors, 0)}
 <b>There were errors on the form: </b><br />
@@ -25,6 +80,28 @@
 </ul>
 {/if}
 
+
+<link rel="stylesheet" href={"stylesheets/checkout.css"|ezdesign()} />
+<script src="https://js.stripe.com/v3/"></script>
+<script src={"javascript/stripe-checkout.js"|ezdesign()} defer></script>
+
+    <!-- Display a payment form -->
+    <form id="payment-form" data-order-id="{$order_id}">
+      <div id="payment-element">
+        <!--Stripe.js injects the Payment Element-->
+      </div>
+      <button id="submit">
+        <div class="spinner hidden" id="spinner"></div>
+        <span id="button-text">Pay now</span>
+      </button>
+      <div id="payment-message" class="hidden"></div>
+    </form>
+
+          </div>
+          <!-- user info ends -->
+</section>
+
+{*
 <form name="ezauthorizeForm" action={"/shop/checkout"|ezurl} method="post">
 
 <input type=hidden name="orderid" value="{$order_id}" />
@@ -61,7 +138,6 @@
 <td>
   <select name="ExpirationMonth">
     <option value="">Month</option>
-    {* Dynamic Loop *}
     {for 1 to 12 as $month}
       {if $month|lt(10)}{set $month=concat('0',$month)}{/if}
     <option value="{$month}"{if eq($expirationmonth, $month)} selected="selected"{/if}>{$month}</option>
@@ -69,7 +145,6 @@
   </select>
   <select name="ExpirationYear">
     <option value="">Year</option>
-    {* Dynamic Loop *}
     {def $curr_year=currentdate()|datetime( 'custom', '%y' )|int }
     {for $curr_year to $curr_year|sum(10) as $year}
       {if $year|lt(10)}{set $year=concat('0',$year)}{/if}
@@ -82,6 +157,7 @@
 <td colspan="2"><input class="defaultbutton" type="submit" name="validate" value="Submit" /><input class="defaultbutton" type="submit" name="CancelButton" value="{'Cancel'|i18n('design/standard/workflow')}" /></td>
 </tr>
 </table>
+*}
 
 {def $s_display_help = ezini( 'eZAuthorizeSettings', 'DisplayHelp', 'ezauthorize.ini' )}
 {if eq( $s_display_help, true )}

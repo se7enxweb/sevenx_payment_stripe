@@ -1,75 +1,83 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<package version="" <!--   -->
-         development="true"  <!-- True /false -->
+<package version="2.0"
+         development="false"
          xmlns:ezpackage="http://ez.no/ezpackage"
          install_type="install">
-  <warning>This format was made with a development version and will not work with any release versions.
-The format of this file is also subject to change until the release version.
-Upgrades to the development format will not be supported.</warning>
-  <name>ezauthorize</name> <!-- Identifier of the package -->
-  <summary>eZ Authorize</summary> <!-- Name of the package -->
-  <description>Payment gateway for Authorize.Net</description> <!-- Long description of package functionality-->
-  <ezpublish xmlns:ezpublish="http://ez.no/ezpublish"> 
-    <version>3.7</version> <!-- eZ publish version -->
-    <named-version>3.7</named-version><!-- eZ publish version -->
+  <name>sevenx_payment_stripe</name>
+  <summary>7x Payment Gateway : Stripe</summary>
+  <description>Stripe Payment Element gateway for eZ Publish 4 / Exponential CMS. Integrates the Stripe PaymentIntents API and Stripe.js Payment Element into the eZ Publish shop workflow. Supports cards, Apple Pay, Google Pay, Link, Stripe Tax, and all Stripe-enabled payment methods.</description>
+  <ezpublish xmlns:ezpublish="http://ez.no/ezpublish">
+    <version>4.7</version>
+    <named-version>4.7</named-version>
   </ezpublish>
   <maintainers xmlns:ezmaintainer="http://ez.no/ezpackage">
     <maintainer>
-      <name>Brookins Consulting</name>
-      <email>info@brookinsconsulting.com</email>
+      <name>7x</name>
+      <email>info@se7enx.com</email>
       <role>lead</role>
     </maintainer>
   </maintainers>
   <packaging xmlns:ezpackaging="http://ez.no/ezpackage">
-    <timestamp>1101093193</timestamp> <!-- Update to currenttime -->
-    <host>brookinsconsulting.com</host>
+    <timestamp>1748131200</timestamp>
+    <host>se7enx.com</host>
   </packaging>
   <documents>
-    <document mime-type="text/plain"
-              name="README" />
-    <document mime-type="text/plain"
-              name="LICENSE" />
-    <document mime-type="text/plain"
-              name="INSTALL" />
-    <document mime-type="text/plain"
-              name="FAQ" />
+    <document mime-type="text/markdown" name="README" />
+    <document mime-type="text/plain"   name="LICENSE" />
+    <document mime-type="text/markdown" name="doc/INSTALL" />
+    <document mime-type="text/markdown" name="doc/FEATURES" />
+    <document mime-type="text/markdown" name="doc/FAQ" />
+    <document mime-type="text/markdown" name="doc/TODO" />
   </documents>
-  <changelog xmlns:ezchangelog="http://ez.no/ezpackage"> <!-- Add new changelog entry for each release-->
+  <changelog xmlns:ezchangelog="http://ez.no/ezpackage">
+    <entry timestamp="1748131200"
+           person="7x"
+           email="info@se7enx.com"
+           release="1.0.0">
+      <change>Complete rewrite: Authorize.Net replaced by Stripe Payment Element (PaymentIntents API, Stripe.js v3).</change>
+      <change>Added confirm.php: server-side PaymentIntent verification and order status update.</change>
+      <change>Added Stripe Tax Calculations API integration (non-blocking).</change>
+      <change>Added order ownership check in charge.php.</change>
+      <change>Moved secret key to stripe.ini.append.php.</change>
+      <change>Fixed PHP 8 deprecation in eZOrder::active() parameter order.</change>
+      <change>Removed all Authorize.Net legacy code.</change>
+    </entry>
     <entry timestamp="1101093193"
            person="Brookins Consulting"
            email="info@brookinsconsulting.com"
-           release="1">
-      <change>Creation of package</change>
+           release="1.0.0">
+      <change>Initial release — Authorize.Net AIM gateway for eZ Publish.</change>
     </entry>
   </changelog>
   <simple-files />
-  <version xmlns:ezversion="http://ez.no/ezpackage"> <!-- Update for each release -->
-    <number>1.1</number>
-    <release>2</release>
+  <version xmlns:ezversion="http://ez.no/ezpackage">
+    <number>1.0</number>
+    <release>0</release>
   </version>
-  <licence>GPL</licence>
+  <licence>GNU General Public License v2.0 (or any later version)</licence>
   <state>stable</state>
-  <dependencies xmlns:ezdependency="http://ez.no/ezpackage">  <!-- Update for your package -->
-    <provides> <!-- Insert what the extension provides here -->
+  <dependencies xmlns:ezdependency="http://ez.no/ezpackage">
+    <provides>
       <provide type="ezextension"
-               name="ezauthorize"
-               value="1.1" />
+               name="sevenx_payment_stripe"
+               value="1.0.0" />
     </provides>
-    <requires> <!-- Insert eZ publish requirements here -->
+    <requires>
       <require type="ezpublish"
                name="version"
-               value="3.7]" />
+               value="4.7" />
     </requires>
-    <requires />
-    <obsoletes />
+    <obsoletes>
+      <obsolete type="ezextension" name="ezauthorize" />
+    </obsoletes>
     <conflicts />
   </dependencies>
-  <install xmlns:ezinstall="http://ez.no/ezpackage"> <!-- Update for your package -->
+  <install xmlns:ezinstall="http://ez.no/ezpackage">
     <item type="ezextension"
-          name="ezauthorize" />
+          name="sevenx_payment_stripe" />
   </install>
-  <uninstall xmlns:ezinstall="http://ez.no/ezpackage"> <!-- Update for your package -->
+  <uninstall xmlns:ezinstall="http://ez.no/ezpackage">
     <item type="ezextension"
-          name="ezauthorize" />
+          name="sevenx_payment_stripe" />
   </uninstall>
 </package>

@@ -5,8 +5,8 @@
 // Copyright (C) 2001-2006 Brookins Consulting. All rights reserved.
 //
 // This file may be distributed and/or modified under the terms of the
-// "GNU General Public License" version 2 or greater as published by the Free
-// Software Foundation and appearing in the file LICENSE.GPL included in
+// GNU General Public License v2.0 (or any later version), as published by the Free
+// Software Foundation and appearing in the file LICENSE included in
 // the packaging of this file.
 //
 // This file is provided AS IS with NO WARRANTY OF ANY KIND, INCLUDING
@@ -20,23 +20,21 @@
 // this licencing isn't clear to you.
 //
 
-$Module = array( 'name' => 'refund',
+$Module = array( 'name' => 'charge',
                  'variable_params' => true );
 
 $ViewList = array();
-$ViewList['refund'] = array(
-                          'script' => 'order.php',
+$ViewList['charge'] = array(
+                          'script' => 'charge.php',
                           "default_navigation_part" => 'ezshopnavigationpart',
                           "unordered_params" => array( 'order' => 'Order' ) );
-
-/*
-$Module = array( 'name' => 'refund' );
-
-$ViewList["refund"] = array(
-                               "functions" => array( 'refund' ),
-                               "script" => "order.php",
-                               "default_navigation_part" => 'ezshopnavigationpart',
-                               "params" => array( "OrderID" ) );
-*/
+$ViewList['confirm'] = array(
+                          'script' => 'confirm.php',
+                          "default_navigation_part" => 'ezshopnavigationpart',
+                          "unordered_params" => array() );
+$ViewList['verify'] = array(
+                          'script' => 'verify.php',
+                          "default_navigation_part" => 'ezshopnavigationpart',
+                          "unordered_params" => array() );
 
 ?>

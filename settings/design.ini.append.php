@@ -1,4 +1,4 @@
 #?ini charset="iso-8859-1"?
 
 [ExtensionSettings]
-DesignExtensions[]=ezauthorize
+DesignExtensions[]=sevenx_payment_stripe

@@ -1,3 +1,3 @@
 [GatewaysSettings]
-AvailableGateways[]=ezauthorize
-GatewaysDirectories[]=extension/ezauthorize/classes
+AvailableGateways[]=sevenx_payment_stripe
+GatewaysDirectories[]=extension/sevenx_payment_stripe/classes

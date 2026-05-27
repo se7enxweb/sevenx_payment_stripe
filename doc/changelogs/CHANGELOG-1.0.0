@@ -1,3 +1,60 @@
-Changes for 1.0.0
+Changes for 1.0.0 — 2026-05-24
 
-- First public relase.
+Initial release of sevenx_payment_stripe.
+Complete rewrite of the payment gateway: Authorize.Net replaced by Stripe.
+
+New features
+- Stripe Payment Element integration via Stripe.js v3.
+  Supports cards, Apple Pay, Google Pay, Link, and all payment methods
+  enabled in the Stripe Dashboard — no additional code required per method.
+- PaymentIntents API: charge.php creates a Stripe PaymentIntent server-side
+  and returns the clientSecret to the browser.
+- confirm.php: Stripe return_url handler. Retrieves the PaymentIntent from
+  Stripe directly (never trusts redirect_status URL param) and calls
+  $order->modifyStatus(1000) on success, creating an atomic status history
+  entry in eZ Publish.
+- Stripe Tax Calculations API integration in charge.php. Tax is computed
+  per line item using the customer shipping address. Non-blocking: a Stripe
+  Tax failure logs via eZDebug and checkout continues without tax.
+- buildLineItemsFromOrder(): converts eZ Publish product collection items
+  into Stripe Tax line item arrays with amount, reference, and tax_code.
+- Order ownership check: charge.php returns HTTP 403 if the authenticated
+  eZ Publish user does not own the submitted order ID.
+- loadForm() STATUS_ACCEPTED: detects order status_id === 1000 and returns
+  eZWorkflowEventType::STATUS_ACCEPTED to advance the eZ Publish shop
+  workflow without re-rendering the payment form.
+- Idempotent confirm.php: skips modifyStatus() if order is already at
+  status 1000, preventing duplicate history entries on repeated visits.
+- module.php: registers both 'charge' (JSON endpoint) and 'confirm'
+  (return_url handler) views under the 'charge' module.
+- stripe.ini.append.php: INI-based configuration for SecretKey and
+  DisplayHelp. Compatible with eZ Publish siteaccess override system.
+- stripe-checkout-v4.js: Payment Element mounting, confirmPayment() call,
+  return_url configuration.
+- Generic error responses: PHP exceptions from the Stripe SDK are logged
+  via eZDebug::writeError() and only a generic message is returned to the
+  browser. No stack traces or internal details are exposed.
+
+Security
+- Card data never touches the server (Stripe.js hosted iframe).
+- Server-side PaymentIntent verification before any order mutation.
+- Order ownership enforced in charge.php (HTTP 403 on mismatch).
+- Secret key stored in INI file only; never in PHP source or JS.
+- PHP exceptions redacted from client-facing error responses.
+
+Bug fixes
+- PHP 8 deprecation fixed: eZOrder::active() required parameters moved
+  before optional parameters (kernel/classes/ezorder.php and all callers).
+
+Removals (legacy Authorize.Net integration)
+- Removed: classes/ezauthorizeaim.php
+- Removed: classes/ezauthorizeinfo.php
+- Removed: classes/ezauthorizerefund.php
+- Removed: shopaccounthandlers/ezcustomshopaccounthandler.php
+- Removed: cacert.pem
+- Removed: settings/shopaccount.ini.append
+- Removed: settings/shopaccount.ini.append.php
+- Removed: doCURL() and validateForm() from the gateway class
+- INI file: ezauthorize.ini.append.php → stripe.ini.append.php
+- INI section: eZAuthorizeSettings → Sevenx_Payment_Stripe_Settings
+- Extension name: ezauthorize → sevenx_payment_stripe

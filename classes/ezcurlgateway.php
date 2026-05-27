@@ -15,7 +15,7 @@
 // Open Source Content Management System.
 //
 // This file may be distributed and/or modified under the terms of the
-// "GNU General Public License" version 2 (or greater) as published by
+// GNU General Public License v2.0 (or any later version), as published by
 // the Free Software Foundation and appearing in the file LICENSE
 // included in the packaging of this file.
 //
@@ -52,7 +52,7 @@ class eZCurlGateway extends eZPaymentGateway
     /*!
      Constructor.
     */
-    function eZCurlGateway()
+    function __construct()
     {
     }
     // override useForm() as false if you do not need to gather additional

@@ -1,14 +1,14 @@
 <?php
-class ezauthorizeInfo
+class sevenx_payment_stripeInfo
 {
     function info()
     {
         return array(
-            'Name' => "<a href='http://projects.ez.no/ezauthorize'>eZ Authorize</a>",
-            'Version' => "1.4.0",
-            'Copyright' => "Copyright (C) 2001 - 2007 <a href='http://brookinsconsulting.com/'>Brookins Consulting</a>",
-            'Author' => "Brookins Consulting",
-            'License' => "GNU General Public License"
+            'Name'      => "<a href='https://github.com/se7enxweb/sevenx_payment_stripe'>7x Payment Gateway : Stripe</a>",
+            'Version'   => "1.0.0",
+            'Copyright' => "Copyright (C) 2001 - 2026 <a href='https://se7enx.com/'>7x</a>",
+            'Author'    => "7x",
+            'License'   => "GNU General Public License v2.0 (or any later version)"
         );
     }
 }

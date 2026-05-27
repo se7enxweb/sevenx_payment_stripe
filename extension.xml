@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<extension version="1">
+    <name>sevenx_payment_stripe</name>
+    <summary>7x Payment Gateway : Stripe</summary>
+    <description>Stripe Payment Element gateway for eZ Publish 4 / Exponential CMS. Integrates the Stripe PaymentIntents API and Stripe.js Payment Element into the eZ Publish shop workflow. Supports cards, Apple Pay, Google Pay, Link, Stripe Tax, and all Stripe-enabled payment methods.</description>
+
+    <version>
+        <major>1</major>
+        <minor>0</minor>
+        <release>0</release>
+    </version>
+
+    <copyright>Copyright (C) 2001 - 2026 7x. All rights reserved.</copyright>
+    <license>GNU General Public License v2.0 (or any later version)</license>
+    <info_url>https://github.com/se7enxweb/sevenx_payment_stripe</info_url>
+
+    <dependencies>
+        <required>
+            <ezpublish version="4.7" />
+        </required>
+    </dependencies>
+</extension>
