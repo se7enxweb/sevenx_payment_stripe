@@ -119,8 +119,13 @@ function calculateTax($stripe, array $lineItems, $currency, ?array $customerAddr
             'line_items' => $lineItems,
         ]);
     } catch (\Throwable $e) {
-        // Tax calculation is best-effort; log and continue
-        eZDebug::writeError('Stripe Tax calculation failed: ' . $e->getMessage(), 'charge.php');
+        // Tax calculation is best-effort; log and continue. An address Stripe cannot place is the buyer's input,
+        // not a fault (the payment goes on without tax): a notice. Everything else is an error.
+        if (method_exists($e, 'getStripeCode') && $e->getStripeCode() === 'customer_tax_location_invalid') {
+            eZDebug::writeNotice('Stripe Tax: no tax location for the address given, paid without tax: ' . $e->getMessage(), 'charge.php');
+        } else {
+            eZDebug::writeError('Stripe Tax calculation failed: ' . $e->getMessage(), 'charge.php');
+        }
         return null;
     }
 }

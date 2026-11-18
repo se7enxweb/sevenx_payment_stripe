@@ -331,7 +331,12 @@ class ezjscServerFunctionsStripeJs extends ezjscServerFunctions
         }
         catch ( \Throwable $e )
         {
-            eZDebug::writeError( 'Stripe Tax calculation failed: ' . $e->getMessage(), __CLASS__ );
+            // An address Stripe cannot place (customer_tax_location_invalid) is the buyer's input, not a fault: the
+            // payment goes on without tax, as for any failure here, so it is a notice. Everything else is an error.
+            if ( method_exists( $e, 'getStripeCode' ) && $e->getStripeCode() === 'customer_tax_location_invalid' )
+                eZDebug::writeNotice( 'Stripe Tax: no tax location for the address given, paid without tax: ' . $e->getMessage(), __CLASS__ );
+            else
+                eZDebug::writeError( 'Stripe Tax calculation failed: ' . $e->getMessage(), __CLASS__ );
             return null;
         }
     }
