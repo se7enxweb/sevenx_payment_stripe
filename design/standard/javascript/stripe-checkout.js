@@ -111,7 +111,8 @@ async function handleSubmit(e) {
 
     if (DEBUG) console.log("[stripe] confirmPayment result — paymentIntent=", paymentIntent, "error=", error);
 
-    if (paymentIntent && paymentIntent.status === "succeeded") {
+    // "requires_capture": an order authorized only (a part is taken later, IntentHandler); the server checks it the same way
+    if (paymentIntent && (paymentIntent.status === "succeeded" || paymentIntent.status === "requires_capture")) {
         await verifyAndRedirect(paymentIntent.id);
         return;
     }

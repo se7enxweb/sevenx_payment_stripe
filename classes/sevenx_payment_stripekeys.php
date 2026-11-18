@@ -22,7 +22,39 @@ class Sevenx_Payment_StripeKeys
     {
         $ini = eZINI::instance( 'stripe.ini' );
         $mode = $ini->hasVariable( self::SECTION, 'Mode' ) ? strtolower( trim( (string)$ini->variable( self::SECTION, 'Mode' ) ) ) : 'live';
+        if ( $mode !== 'test' && self::testBuyer() )
+            return 'test';
         return $mode === 'test' ? 'test' : 'live';
+    }
+
+    /** The class a hook setting names, when it exists and has the method; '' otherwise. */
+    protected static function handler( $setting, $method )
+    {
+        $ini = eZINI::instance( 'stripe.ini' );
+        $class = $ini->hasVariable( self::SECTION, $setting ) ? trim( (string)$ini->variable( self::SECTION, $setting ) ) : '';
+        return $class !== '' && class_exists( $class ) && method_exists( $class, $method ) ? $class : '';
+    }
+
+    /**
+     * Whether the signed-in buyer pays with the test keys while Mode=live: stripe.ini ModeHandler=<class> with a static
+     * testModeFor( $userId ) (a shop's staff test buyers). No handler: never.
+     */
+    public static function testBuyer()
+    {
+        $class = self::handler( 'ModeHandler', 'testModeFor' );
+        return $class !== '' && class_exists( 'eZUser' ) && (bool)call_user_func( array( $class, 'testModeFor' ), (int)eZUser::currentUserID() );
+    }
+
+    /**
+     * Extra PaymentIntent parameters of an order: stripe.ini IntentHandler=<class> with a static intentParams( $order )
+     * (e.g. capture_method=manual for an order of which a part is only taken later). Only capture_method and
+     * payment_method_options are taken. No handler: none.
+     */
+    public static function intentParams( $order )
+    {
+        $class = self::handler( 'IntentHandler', 'intentParams' );
+        $p = $class !== '' ? (array)call_user_func( array( $class, 'intentParams' ), $order ) : array();
+        return array_intersect_key( $p, array( 'capture_method' => 1, 'payment_method_options' => 1 ) );
     }
 
     protected static function setting( $name, $default )

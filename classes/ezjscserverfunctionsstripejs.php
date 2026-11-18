@@ -142,7 +142,7 @@ class ezjscServerFunctionsStripeJs extends ezjscServerFunctions
             'currency'                   => $currency,
             'automatic_payment_methods'  => ['enabled' => true],
             'metadata'                   => $metadata,
-        ] );
+        ] + Sevenx_Payment_StripeKeys::intentParams( $order ) );
 
         return ['clientSecret' => $paymentIntent->client_secret];
     }

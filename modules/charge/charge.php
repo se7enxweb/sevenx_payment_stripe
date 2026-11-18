@@ -200,7 +200,7 @@ try {
         'currency' => $currency,
         'automatic_payment_methods' => ['enabled' => true],
         'metadata' => $metadata,
-    ]);
+    ] + Sevenx_Payment_StripeKeys::intentParams( $order ));
 
     echo json_encode(['clientSecret' => $paymentIntent->client_secret]);
 

@@ -126,7 +126,10 @@ class Sevenx_Payment_StripeOrderCheck
             $orderId = (int)$metadata->$metadataKey;
         }
 
-        if ( $status !== 'succeeded' )
+        // a shop order paid with an authorization only (capture_method manual, a part taken later): held in full
+        $held = $metadataKey === 'order_id' && $status === 'requires_capture'
+             && (string)self::field( $paymentIntent, 'capture_method' ) === 'manual';
+        if ( $status !== 'succeeded' && !$held )
         {
             return 'status_not_succeeded';
         }
@@ -146,7 +149,7 @@ class Sevenx_Payment_StripeOrderCheck
         {
             return 'amount_mismatch';
         }
-        if ( (int)self::field( $paymentIntent, 'amount_received' ) !== (int)$expectedCents )
+        if ( (int)self::field( $paymentIntent, $held ? 'amount_capturable' : 'amount_received' ) !== (int)$expectedCents )
         {
             return 'amount_received_mismatch';
         }
