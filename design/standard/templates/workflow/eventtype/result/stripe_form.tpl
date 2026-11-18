@@ -165,10 +165,6 @@
 </table>
 *}
 
-{def $s_display_help = ezini( 'eZAuthorizeSettings', 'DisplayHelp', 'ezauthorize.ini' )}
-{if eq( $s_display_help, true )}
-<img src="http://usa.visa.com/img/cards/cardart_3Digit_code.gif" alt="" style="margin-top:10px;" />
-{/if}
 
 </form> 
 

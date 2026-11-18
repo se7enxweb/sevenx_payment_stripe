@@ -134,9 +134,11 @@
 {/if}
 </fieldset>
 
-{* eZAuthorize + eZGPG - CC Storage Additions *} 
-{def $fetchStoredTransaction = ezini( 'eZAuthorizeSettings', 'StoreTransactionInformation', 'ezauthorize.ini' )}
-{if and( eq( $fetchStoredTransaction, true), ne( $order.account_information.ezauthorize_card_date, '') )}
+{* eZAuthorize + eZGPG - CC Storage Additions. Authorize.net was retired and ezauthorize.ini is gone: the section
+   shows only where that file still sets StoreTransactionInformation (an unguarded read logged an error per order view). *}
+{def $fetchStoredTransaction = false()}
+{if ezini_hasvariable( 'eZAuthorizeSettings', 'StoreTransactionInformation', 'ezauthorize.ini' )}{set $fetchStoredTransaction = ezini( 'eZAuthorizeSettings', 'StoreTransactionInformation', 'ezauthorize.ini' )}{/if}
+{if and( eq( $fetchStoredTransaction, true ), is_set( $order.account_information.ezauthorize_card_date ) )}{if ne( $order.account_information.ezauthorize_card_date, '' )}
 
 {def $key = ezini( 'eZGPGSettings', 'KeyID', 'ezgpg.ini' )}
 {def $displayTransactionLink = ezini( 'eZAuthorizeSettings', 'ShowAuthorizeDotNetMerchantTransactionDetailHTTPLink', 'ezauthorize.ini' )}
@@ -202,6 +204,6 @@
 {/if}
 </table>
 </fieldset>
-{/if}
+{/if}{/if}
 
 </div>
