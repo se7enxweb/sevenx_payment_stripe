@@ -97,6 +97,12 @@
       <div id="payment-message" class="hidden"></div>
     </form>
 
+{* PayPal next to the card form when the extension sevenx_paypal is installed and offers it to this buyer
+   (paypal.ini [PayPalSettings] ShopCheckout=enabled and Enabled): its buttons pay the same order, priced on the server *}
+{if ezini_hasvariable( 'PayPalSettings', 'ShopCheckout', 'paypal.ini' )}{if eq( ezini( 'PayPalSettings', 'ShopCheckout', 'paypal.ini' ), 'enabled' )}
+{include uri='design:sevenx_paypal/shop_buttons.tpl' order_id=$order_id}
+{/if}{/if}
+
           </div>
           <!-- user info ends -->
 </section>
