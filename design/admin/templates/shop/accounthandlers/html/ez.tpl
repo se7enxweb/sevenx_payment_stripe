@@ -134,76 +134,7 @@
 {/if}
 </fieldset>
 
-{* eZAuthorize + eZGPG - CC Storage Additions. Authorize.net was retired and ezauthorize.ini is gone: the section
-   shows only where that file still sets StoreTransactionInformation (an unguarded read logged an error per order view). *}
-{def $fetchStoredTransaction = false()}
-{if ezini_hasvariable( 'eZAuthorizeSettings', 'StoreTransactionInformation', 'ezauthorize.ini' )}{set $fetchStoredTransaction = ezini( 'eZAuthorizeSettings', 'StoreTransactionInformation', 'ezauthorize.ini' )}{/if}
-{if and( eq( $fetchStoredTransaction, true ), is_set( $order.account_information.ezauthorize_card_date ) )}{if ne( $order.account_information.ezauthorize_card_date, '' )}
-
-{def $key = ezini( 'eZGPGSettings', 'KeyID', 'ezgpg.ini' )}
-{def $displayTransactionLink = ezini( 'eZAuthorizeSettings', 'ShowAuthorizeDotNetMerchantTransactionDetailHTTPLink', 'ezauthorize.ini' )}
-{def $displayRefundButton = ezini( 'eZAuthorizeSettings', 'ShowAuthorizeDotNetRefundButton', 'ezauthorize.ini' )}
-
-<br />
-<script language="Javascript">
-{literal}
-<!--
- function doubleConfirmMessagePaymentRefund()
- {
-  var agree=confirm('Are you absolutly certain you want to refund this order?\n\nThis action is permenant ...');
-
-  if(agree)
-  {
-    alert('A log of this change will be saved.');
-    return true ;
-  }
-  else
-  {
-    alert('A wise decision!');
-    return false ;
-  }
-
-  return false ;
-}
--->
-{/literal}
-</script>
-
-{* $order.account_information|attribute(show,1) *}
-{* $order.account_information|attribute(show,1) *}
-{* $order|attribute(show,1) *}
-
-<fieldset>
-<legend>{'Payment information'|i18n( 'design/admin/shop/accounthandlers/html/ez' )}</legend>
-<table class="list" cellspacing="0">
-<tr>
-    <td>{'Authorize.net : Transaction ID'|i18n( 'design/admin/shop/accounthandlers/html/ez' )}</td>
-    <td>{if eq( $displayTransactionLink, true )}<a target="_blank" href="https://account.authorize.net/ui/themes/anet/merch.aspx?page=history&sub=detail&transID={$order.account_information.ezauthorize_transaction_id}">{$order.account_information.ezauthorize_transaction_id}</a>{else}{$order.account_information.ezauthorize_transaction_id}{/if}</td>
-</tr>
-<tr>
-    <td>{'Card Holder\'s Name'|i18n( 'design/admin/shop/accounthandlers/html/ez' )}</td>
-    <td>{ezgpg_decrypt($order.account_information.ezauthorize_card_name, $key)}</td>
-</tr>
-<tr>
-    <td>{'Last 4 Digits of Card Number'|i18n( 'design/admin/shop/accounthandlers/html/ez' )}</td>
-    <td>{ezgpg_decrypt_limit($order.account_information.ezauthorize_card_number, $key)}</td>
-</tr>
-<tr>
-    <td>{'Card Expiration Date'|i18n( 'design/admin/shop/accounthandlers/html/ez' )}</td>
-    <td>{$order.account_information.ezauthorize_card_date}</td>
-</tr>
-<tr>
-    <td>{'Card Type'|i18n( 'design/admin/shop/accounthandlers/html/ez' )}</td>
-    <td>{$order.account_information.ezauthorize_card_type|upfirst()}</td>
-</t>
-{if eq( $displayRefundButton, true) }
-<tr>
-    <td>{* 'Refund Order'|i18n( 'design/admin/shop/accounthandlers/html/ez' ) *}</td>
-    <td style="text-align:right; padding-top: 10px; padding-right: 5px;"><form name="refund" action="/refund/refund/order/{$order.id}" method="post" onSubmit="return doubleConfirmMessagePaymentRefund()"><input name="order" type="hidden" value="{$order.id}" /><input class="button" type=submit name="SubmitButton" value="Refund Order Payment" title="Click this button if you wish to refund this order payment." /></form></td>
-</tr>
-{/if}
-</table>
-</fieldset>
-{/if}{/if}
+{* The Authorize.net card details (eZAuthorize + eZGPG) were shown here; the gateway was retired on 2026-11-16 and its
+   extension, with the ezgpg operators and ezauthorize.ini, is gone. *}
 
 </div>
