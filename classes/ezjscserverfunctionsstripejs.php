@@ -37,6 +37,19 @@ class ezjscServerFunctionsStripeJs extends ezjscServerFunctions
     const DEFAULT_TAX_CODE = 'txcd_99999999';
 
     /**
+     * The JSON body of the request. Tests set it (with a mocked Stripe HTTP client); a request leaves it null and
+     * the body is read from php://input.
+     *
+     * @var string|null
+     */
+    public static $requestBody = null;
+
+    private static function requestBody()
+    {
+        return self::$requestBody !== null ? self::$requestBody : file_get_contents( 'php://input' );
+    }
+
+    /**
      * eZJSCore server function — creates a Stripe PaymentIntent and returns
      * the clientSecret for the Stripe Payment Element.
      *
@@ -54,15 +67,16 @@ class ezjscServerFunctionsStripeJs extends ezjscServerFunctions
      */
     public static function confirm( $args )
     {
-        require_once __DIR__ . '/../../../vendor/autoload.php';
+        require_once __DIR__ . '/sevenx_payment_stripeordercheck.php';
+        Sevenx_Payment_StripeOrderCheck::loadSdk();
+        require_once __DIR__ . '/sevenx_payment_stripeordercheck.php';
 
-        $stripeSecretKey = eZINI::instance( 'stripe.ini' )->variable(
-            'Sevenx_Payment_Stripe_Settings', 'SecretKey'
-        );
+        require_once __DIR__ . '/sevenx_payment_stripekeys.php';
+        $stripeSecretKey = Sevenx_Payment_StripeKeys::secretKey();
         $stripe = new \Stripe\StripeClient( $stripeSecretKey );
 
         // Parse order ID from JSON request body
-        $jsonObj = json_decode( file_get_contents( 'php://input' ) );
+        $jsonObj = json_decode( self::requestBody() );
         $orderId = isset( $jsonObj->orderId ) ? (int)$jsonObj->orderId : 0;
         if ( $orderId <= 0 )
         {
@@ -82,9 +96,16 @@ class ezjscServerFunctionsStripeJs extends ezjscServerFunctions
             throw new \RuntimeException( 'Access denied.' );
         }
 
-        // eZ Publish stores totals as floats; Stripe requires integer cents
-        $totalIncVat = (float)$order->attribute( 'total_inc_vat' );
-        $amountCents = (int)round( $totalIncVat * 100 );
+        // An order already paid is never charged again.
+        if ( (int)$order->attribute( 'status_id' ) === Sevenx_Payment_StripeOrderCheck::PAID_STATUS_ID )
+        {
+            throw new \RuntimeException( 'This order has already been paid.' );
+        }
+
+        // The amount is the order's own total in cents, computed on the server from the
+        // order (coupons and shipping included); nothing posted by the browser counts.
+        $amountCents = Sevenx_Payment_StripeOrderCheck::orderAmountCents( $order );
+        $currency    = Sevenx_Payment_StripeOrderCheck::orderCurrency( $order );
         if ( $amountCents <= 0 )
         {
             throw new \InvalidArgumentException( 'Order amount is invalid.' );
@@ -107,7 +128,7 @@ class ezjscServerFunctionsStripeJs extends ezjscServerFunctions
         }
 
         // Attempt Stripe Tax Calculation (non-blocking)
-        $taxCalculation = self::calculateTax( $stripe, $lineItems, 'usd', $shippingAddress );
+        $taxCalculation = self::calculateTax( $stripe, $lineItems, $currency, $shippingAddress );
 
         // Metadata: always include order_id; add tax_calculation when available
         $metadata = ['order_id' => (string)$orderId];
@@ -118,7 +139,7 @@ class ezjscServerFunctionsStripeJs extends ezjscServerFunctions
 
         $paymentIntent = $stripe->paymentIntents->create( [
             'amount'                     => $amountCents,
-            'currency'                   => 'usd',
+            'currency'                   => $currency,
             'automatic_payment_methods'  => ['enabled' => true],
             'metadata'                   => $metadata,
         ] );
@@ -146,51 +167,51 @@ class ezjscServerFunctionsStripeJs extends ezjscServerFunctions
      */
     public static function verify( $args )
     {
-        require_once __DIR__ . '/../../../vendor/autoload.php';
+        require_once __DIR__ . '/sevenx_payment_stripeordercheck.php';
+        Sevenx_Payment_StripeOrderCheck::loadSdk();
+        require_once __DIR__ . '/sevenx_payment_stripeordercheck.php';
 
-        $stripeSecretKey = eZINI::instance( 'stripe.ini' )->variable(
-            'Sevenx_Payment_Stripe_Settings', 'SecretKey'
-        );
+        require_once __DIR__ . '/sevenx_payment_stripekeys.php';
+        $stripeSecretKey = Sevenx_Payment_StripeKeys::secretKey();
         $stripe = new \Stripe\StripeClient( $stripeSecretKey );
 
-        $jsonObj         = json_decode( file_get_contents( 'php://input' ) );
-        $paymentIntentId = isset( $jsonObj->paymentIntentId ) ? trim( $jsonObj->paymentIntentId ) : '';
+        $jsonObj         = json_decode( self::requestBody() );
+        $paymentIntentId = isset( $jsonObj->paymentIntentId ) ? trim( (string)$jsonObj->paymentIntentId ) : '';
 
-        if ( empty( $paymentIntentId ) )
+        if ( !preg_match( '/^pi_[A-Za-z0-9]+$/', $paymentIntentId ) )
         {
             throw new \InvalidArgumentException( 'Missing paymentIntentId.' );
         }
 
-        // Retrieve from Stripe — never trust the client for status
+        // The order this checkout pays is the one the shop put in the session at
+        // shop/confirmorder. The id the page posts is only a fallback for a lost
+        // session, and the order must still belong to the current user.
+        $expectedOrderId = self::checkoutOrderId( $jsonObj );
+
+        // Retrieve from Stripe: status, amount, currency and metadata come from
+        // Stripe's answer to the server, never from the browser.
         $paymentIntent = $stripe->paymentIntents->retrieve( $paymentIntentId );
 
-        if ( $paymentIntent->status !== 'succeeded' )
-        {
-            throw new \RuntimeException( 'Payment not succeeded: ' . $paymentIntent->status );
-        }
-
-        $orderId = isset( $paymentIntent->metadata['order_id'] )
-            ? (int) $paymentIntent->metadata['order_id']
-            : 0;
-
-        if ( $orderId <= 0 )
-        {
-            throw new \RuntimeException( 'No order_id in PaymentIntent metadata.' );
-        }
-
-        $order = eZOrder::fetch( $orderId );
-        if ( !$order )
-        {
-            throw new \RuntimeException( 'Order not found: ' . $orderId );
-        }
-
-        // Idempotent — skip if already marked Paid
-        if ( (int) $order->attribute( 'status_id' ) !== 1000 )
-        {
-            $order->modifyStatus( 1000 );
-        }
+        $orderId = Sevenx_Payment_StripeOrderCheck::verifyAndMarkPaid( $paymentIntent, $expectedOrderId );
 
         return ['orderId' => $orderId, 'status' => 'paid'];
+    }
+
+    /**
+     * The order the current checkout is paying: the session's MyTemporaryOrderID,
+     * else the orderId the page posted (checked against the user later).
+     *
+     * @param object|null $jsonObj
+     * @return int
+     */
+    private static function checkoutOrderId( $jsonObj )
+    {
+        $sessionOrderId = (int)eZHTTPTool::instance()->sessionVariable( 'MyTemporaryOrderID' );
+        if ( $sessionOrderId > 0 )
+        {
+            return $sessionOrderId;
+        }
+        return isset( $jsonObj->orderId ) ? (int)$jsonObj->orderId : 0;
     }
 
     /**

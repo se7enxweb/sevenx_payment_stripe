@@ -13,7 +13,8 @@
  * production path runs through eZJSCore.
  */
 
-require_once __DIR__ . '/../../../vendor/autoload.php';
+require_once __DIR__ . '/../../classes/sevenx_payment_stripeordercheck.php';
+Sevenx_Payment_StripeOrderCheck::loadSdk();
 
 header( 'Content-Type: application/json' );
 
@@ -51,7 +52,8 @@ if ( !$paymentIntentId )
 
 // ── Stripe client ─────────────────────────────────────────────────────────────
 
-$stripeSecretKey = eZINI::instance( 'stripe.ini' )->variable( 'Sevenx_Payment_Stripe_Settings', 'SecretKey' );
+require_once __DIR__ . '/../../classes/sevenx_payment_stripekeys.php';
+$stripeSecretKey = Sevenx_Payment_StripeKeys::secretKey();
 $stripe          = new \Stripe\StripeClient( $stripeSecretKey );
 
 // ── Retrieve and validate the PaymentIntent ───────────────────────────────────
@@ -66,33 +68,33 @@ catch ( \Throwable $e )
     stripeVerifyError( 502, 'Failed to retrieve PaymentIntent from Stripe.' );
 }
 
-if ( $paymentIntent->status !== 'succeeded' )
+// ── Check the intent against the checkout's order and mark it Paid ─────────────
+// Sevenx_Payment_StripeOrderCheck compares status, metadata order_id, currency,
+// amount and amount_received (as Stripe returned them) with the order's own total.
+// The order is the session's MyTemporaryOrderID; a posted orderId is only a fallback.
+
+require_once __DIR__ . '/../../classes/sevenx_payment_stripeordercheck.php';
+
+$expectedOrderId = (int)eZHTTPTool::instance()->sessionVariable( 'MyTemporaryOrderID' );
+if ( $expectedOrderId <= 0 )
 {
-    stripeVerifyError( 400, 'PaymentIntent has not succeeded (status: ' . $paymentIntent->status . ').' );
+    $expectedOrderId = (int)( $data['orderId'] ?? 0 );
 }
 
-$orderId = isset( $paymentIntent->metadata['order_id'] )
-    ? (int) $paymentIntent->metadata['order_id']
-    : 0;
-
-if ( $orderId <= 0 )
+$refusal = '';
+$orderId = 0;
+try
 {
-    stripeVerifyError( 400, 'Invalid or missing order_id in PaymentIntent metadata.' );
+    $orderId = Sevenx_Payment_StripeOrderCheck::verifyAndMarkPaid( $paymentIntent, $expectedOrderId );
+}
+catch ( \RuntimeException $e )
+{
+    $refusal = $e->getMessage();
 }
 
-// ── Load and guard the order ──────────────────────────────────────────────────
-
-$order = eZOrder::fetch( $orderId );
-
-if ( !$order )
+if ( $refusal !== '' )
 {
-    stripeVerifyError( 404, 'Order not found: ' . $orderId );
-}
-
-// Idempotency: skip modifyStatus() if the order is already marked Paid (1000).
-if ( (int) $order->attribute( 'status_id' ) !== 1000 )
-{
-    $order->modifyStatus( 1000 );
+    stripeVerifyError( 409, $refusal );
 }
 
 // ── Return success ────────────────────────────────────────────────────────────

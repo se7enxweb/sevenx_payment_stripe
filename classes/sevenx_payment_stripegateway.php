@@ -14,6 +14,16 @@
 //   6. loadForm() Case 1        — order status is already 1000; returns STATUS_ACCEPTED.
 //                                The kernel activates the order and redirects to orderview.
 //
+// The base class is this extension's own copy of eZCurlGateway (classes/ezcurlgateway.php). Other
+// copies exist (extension/ezcurlgateway, the retired ezauthorize), and the autoload array maps the
+// class to whichever it found first; the extension/ezcurlgateway copy does not parse on PHP 8. So the
+// copy that works is loaded here, unless a copy is already loaded.
+//
+
+if ( !class_exists( 'eZCurlGateway', false ) )
+{
+    require_once __DIR__ . '/ezcurlgateway.php';
+}
 
 class Sevenx_Payment_StripeGateway extends eZCurlGateway
 {
@@ -48,6 +58,15 @@ class Sevenx_Payment_StripeGateway extends eZCurlGateway
             return eZWorkflowEventType::STATUS_ACCEPTED;
         }
 
+        // Case 0: Nothing to pay (a free product, a 100% coupon). Stripe takes no payment of 0 (ezjsc-stripe::confirm
+        // refuses it, so such an order could never be completed): it is accepted without contacting Stripe. The total
+        // is the shop's own, computed from the product prices on the server, never a value sent by the browser.
+        if ( $order && round( (float)$order->attribute( 'total_inc_vat' ), 2 ) <= 0 )
+        {
+            eZDebug::writeNotice( 'Order ' . (int)$order->attribute( 'id' ) . ' has nothing to pay: accepted without a payment', __METHOD__ );
+            return eZWorkflowEventType::STATUS_ACCEPTED;
+        }
+
         // Case 2: Fresh checkout — render the Stripe Payment Element form.
         // ezjsc-stripe::verify (called by JS after Stripe redirect) already set
         // status_id to 1000 before the clean reload reaches here, so Case 1
@@ -56,7 +75,8 @@ class Sevenx_Payment_StripeGateway extends eZCurlGateway
         $tplVars['s_display_help']  = $ini->variable( 'Sevenx_Payment_Stripe_Settings', 'DisplayHelp' );
         $tplVars['errors']          = $errors;
         $tplVars['order_id']        = $processParams['order_id'];
-        $tplVars['publishable_key'] = $ini->variable( 'Sevenx_Payment_Stripe_Settings', 'PublishableKey' );
+        require_once __DIR__ . '/sevenx_payment_stripekeys.php';
+        $tplVars['publishable_key'] = Sevenx_Payment_StripeKeys::publishableKey();
 
         $process->Template = array(
             'templateName' => 'design:workflow/eventtype/result/stripe_form.tpl',

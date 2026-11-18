@@ -14,6 +14,25 @@ const stripe = Stripe(publishableKey);
 // Order ID is written by the template into data-order-id on #payment-form.
 const orderId = parseInt(document.querySelector("#payment-form").dataset.orderId, 10);
 
+// ezformtoken (CSRF protection): every POST of a signed-in session must carry the form token. ezformtoken writes
+// it into the page head as <meta name="csrf-token" content="..."> and into each POST form as ezxform_token, and
+// accepts it from a script in the X-CSRF-Token header (extension/ezformtoken/event/ezxformtoken.php: the header is
+// read at line 158, the meta tags are written at line 262), as the kernel's own scripts send it
+// (design/standard/javascript/graphql_playground.js and expdebugbar.js).
+function csrfToken() {
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    if (meta && meta.content) return meta.content;
+    const field = document.querySelector('input[name="ezxform_token"]');
+    return field ? field.value : "";
+}
+
+function jsonHeaders() {
+    const headers = { "Content-Type": "application/json", "Accept": "application/json" };
+    const token = csrfToken();
+    if (token) headers["X-CSRF-Token"] = token;
+    return headers;
+}
+
 let elements;
 let initializePromise;
 
@@ -39,7 +58,7 @@ async function initialize() {
 
     const response = await fetch("/ezjscore/call/ezjsc-stripe::confirm", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
+        headers: jsonHeaders(),
         body: JSON.stringify({ orderId }),
     });
 
@@ -129,8 +148,10 @@ async function verifyAndRedirect(paymentIntentId) {
     try {
         const response = await fetch("/ezjscore/call/ezjsc-stripe::verify", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "Accept": "application/json" },
-            body: JSON.stringify({ paymentIntentId }),
+            headers: jsonHeaders(),
+            // The server checks the intent against the order in the session; orderId
+            // is only a fallback for a lost session and is checked against the user.
+            body: JSON.stringify({ paymentIntentId, orderId }),
         });
 
         const data = await response.json();
@@ -138,7 +159,8 @@ async function verifyAndRedirect(paymentIntentId) {
         if (DEBUG) console.log("[stripe] verify response status=", response.status, "data=", data);
 
         if (!response.ok || data.error_text) {
-            showMessage(data.error_text || "Payment verification failed. Please contact support.");
+            // A refused payment stays on screen: the buyer must read it.
+            showMessage(data.error_text || "Payment verification failed. Please contact support.", true);
             setLoading(false);
             return;
         }
@@ -154,10 +176,13 @@ async function verifyAndRedirect(paymentIntentId) {
 // ---------------------------------------------------------------------------
 // UI helpers
 // ---------------------------------------------------------------------------
-function showMessage(messageText) {
+function showMessage(messageText, persistent) {
     const el = document.querySelector("#payment-message");
     el.classList.remove("hidden");
     el.textContent = messageText;
+    if (persistent) {
+        return;
+    }
     setTimeout(function () {
         el.classList.add("hidden");
         el.textContent = "";

@@ -20,9 +20,11 @@
 // of this licencing isn't clear to you.
 //
 
-require_once __DIR__ . '/../../../vendor/autoload.php';
+require_once __DIR__ . '/../../classes/sevenx_payment_stripeordercheck.php';
+Sevenx_Payment_StripeOrderCheck::loadSdk();
 
-$stripeSecretKey = eZINI::instance( 'stripe.ini' )->variable( 'Sevenx_Payment_Stripe_Settings', 'SecretKey' );
+require_once __DIR__ . '/../../classes/sevenx_payment_stripekeys.php';
+$stripeSecretKey = Sevenx_Payment_StripeKeys::secretKey();
 $stripe = new \Stripe\StripeClient( $stripeSecretKey );
 
 // Default Stripe tax code — mirrors ezjscServerFunctionsStripeJs::DEFAULT_TAX_CODE.
@@ -153,9 +155,16 @@ try {
         eZExecution::cleanExit();
     }
 
-    // eZ Publish stores totals as floats; Stripe requires integer cents
-    $totalIncVat  = (float)$order->attribute('total_inc_vat');
-    $amountCents  = (int)round($totalIncVat * 100);
+    // The amount is the order's own total in cents (coupons and shipping included),
+    // computed on the server; nothing posted by the browser counts.
+    require_once __DIR__ . '/../../classes/sevenx_payment_stripeordercheck.php';
+    if ( (int)$order->attribute( 'status_id' ) === Sevenx_Payment_StripeOrderCheck::PAID_STATUS_ID ) {
+        http_response_code(409);
+        echo json_encode(['error' => 'This order has already been paid.']);
+        eZExecution::cleanExit();
+    }
+    $amountCents  = Sevenx_Payment_StripeOrderCheck::orderAmountCents( $order );
+    $currency     = Sevenx_Payment_StripeOrderCheck::orderCurrency( $order );
 
     if ($amountCents <= 0) {
         http_response_code(400);
@@ -177,7 +186,7 @@ try {
     }
 
     // Attempt Stripe Tax Calculation (non-blocking)
-    $taxCalculation = calculateTax($stripe, $lineItems, 'usd', $shippingAddress);
+    $taxCalculation = calculateTax($stripe, $lineItems, $currency, $shippingAddress);
 
     // Metadata: always include order_id; add tax_calculation when available
     $metadata = ['order_id' => (string)$orderId];
@@ -188,7 +197,7 @@ try {
     // Create the PaymentIntent using the eZ Publish authoritative total
     $paymentIntent = $stripe->paymentIntents->create([
         'amount'   => $amountCents,
-        'currency' => 'usd',
+        'currency' => $currency,
         'automatic_payment_methods' => ['enabled' => true],
         'metadata' => $metadata,
     ]);
